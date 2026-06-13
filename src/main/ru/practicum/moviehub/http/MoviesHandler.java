@@ -49,7 +49,8 @@ public class MoviesHandler extends BaseHttpHandler {
                 String json = gson.toJson(movies);
                 sendJson(ex, 200, json);
                 return;
-            } if (parts.length == 3 && parts[1].equals("movies")) {
+            }
+            if (parts.length == 3 && parts[1].equals("movies")) {
                 try {
                     int id = Integer.parseInt(parts[2]);
                     Movie movie = storage.getMovieById(id);
@@ -117,7 +118,8 @@ public class MoviesHandler extends BaseHttpHandler {
             }
             String responseJson = gson.toJson(storeMovie);
             sendJson(ex, 201, responseJson);
-        } else if (method.equalsIgnoreCase("DELETE")) {
+        }
+        else if (method.equalsIgnoreCase("DELETE")) {
 
             if (path.equals("/movies")) {
                 ex.sendResponseHeaders(405, 0);
