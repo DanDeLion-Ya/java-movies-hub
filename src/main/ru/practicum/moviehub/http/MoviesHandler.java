@@ -118,8 +118,7 @@ public class MoviesHandler extends BaseHttpHandler {
             }
             String responseJson = gson.toJson(storeMovie);
             sendJson(ex, 201, responseJson);
-        }
-        else if (method.equalsIgnoreCase("DELETE")) {
+        } else if (method.equalsIgnoreCase("DELETE")) {
 
             if (path.equals("/movies")) {
                 ex.sendResponseHeaders(405, 0);
