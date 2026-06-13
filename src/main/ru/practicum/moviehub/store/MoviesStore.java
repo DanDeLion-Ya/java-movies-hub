@@ -13,7 +13,7 @@ public class MoviesStore {
 
     public Movie addMovie(String title, int year) {
         for (Movie movie : movies.values()) {
-            if(movie.getTitle().equals(title) && movie.getYear() == year) {
+            if (movie.getTitle().equals(title) && movie.getYear() == year) {
                 return null;
             }
         }
