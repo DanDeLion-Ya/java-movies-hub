@@ -23,131 +23,138 @@ public class MoviesHandler extends BaseHttpHandler {
 
     @Override
     public void handle(HttpExchange ex) throws IOException {
-        int currentYear = LocalDate.now().getYear();
-        Gson gson = new Gson();
         String method = ex.getRequestMethod();
+        if (method.equalsIgnoreCase("GET")) {
+            handleGet(ex);
+        } else if (method.equalsIgnoreCase("POST")) {
+            handlePost(ex);
+        } else if (method.equalsIgnoreCase("DELETE")) {
+            handleDelete(ex);
+        } else {
+            sendMethodNotAllowed(ex);
+        }
+    }
+
+    private void handleGet(HttpExchange ex) throws IOException {
+        Gson gson = new Gson();
         String path = ex.getRequestURI().getPath();
         String[] parts = path.split("/");
+        String query = ex.getRequestURI().getQuery();
 
-        if (method.equalsIgnoreCase("GET")) {
-            String query = ex.getRequestURI().getQuery();
-
-            if (query != null && query.startsWith("year=")) {
-                try {
-                    int year = Integer.parseInt(query.substring(5));
-                    List<Movie> movies = storage.getMoviesByYear(year);
-                    String json = gson.toJson(movies);
-                    sendJson(ex, 200, json);
-                } catch (NumberFormatException e) {
-                    sendError(ex, 400, "Некорректный параметр запроса - 'year'", List.of());
-                }
-                return;
-            }
-
-            if (path.equals("/movies")) {
-                List<Movie> movies = storage.getAllMovies();
+        if (query != null && query.startsWith("year=")) {
+            try {
+                int year = Integer.parseInt(query.substring(5));
+                List<Movie> movies = storage.getMoviesByYear(year);
                 String json = gson.toJson(movies);
                 sendJson(ex, 200, json);
-                return;
+            } catch (NumberFormatException e) {
+                sendError(ex, 400, "Некорректный параметр запроса - 'year'", List.of());
             }
-            if (parts.length == 3 && parts[1].equals("movies")) {
-                try {
-                    int id = Integer.parseInt(parts[2]);
-                    Movie movie = storage.getMovieById(id);
-                    if (movie == null) {
-                        sendError(ex, 404, "Фильм не найден", List.of());
-                        return;
-                    }
-                    String json = gson.toJson(movie);
-                    sendJson(ex, 200, json);
-                } catch (NumberFormatException e) {
-                    sendError(ex, 400, "Некорректный ID", List.of());
-                }
-                return;
-            }
-            sendError(ex, 404, "Фильм не найден", List.of());
             return;
-
-        } else if (method.equalsIgnoreCase("POST")) {
-            String contentType = ex.getRequestHeaders().getFirst("Content-Type");
-
-            if (contentType == null || !contentType.startsWith("application/json")) {
-                ex.sendResponseHeaders(415, 0);
-                ex.getResponseBody().close();
-                return;
-            }
-            InputStream inputStream = ex.getRequestBody();
-            String body = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
-            Movie inputMovie;
+        } else if (path.equals("/movies")) {
+            List<Movie> movies = storage.getAllMovies();
+            String json = gson.toJson(movies);
+            sendJson(ex, 200, json);
+            return;
+        } else if (parts.length == 3 && parts[1].equals("movies")) {
             try {
-                inputMovie = gson.fromJson(body, Movie.class);
-            } catch (JsonSyntaxException e) {
-                sendError(ex, 422, "Ошибка валидации", List.of());
-                return;
-            }
-            String title = inputMovie.getTitle();
-            int year = inputMovie.getYear();
-            List<String> details = new ArrayList<>();
-
-            if (title == null || title.trim().isEmpty()) {
-                details.add("Название не должно быть пустым");
-            }
-
-            if (title.length() > 100) {
-                details.add("Название не должно превышать 100 символов");
-            }
-
-            if (year < 1888) {
-                details.add("Год должен быть не меньше 1888");
-            }
-
-            if (year > currentYear + 1) {
-                details.add("Год не должен быть больше " + (currentYear + 1));
-            }
-
-            if (!details.isEmpty()) {
-                sendError(ex, 422, "Ошибка валидации", details);
-                return;
-            }
-            Movie storeMovie = storage.addMovie(title, year);
-
-            if (storeMovie == null) {
-                details.add("Фильм с таким названием и годом уже есть");
-                sendError(ex, 422, "Ошибка валидации", details);
-                return;
-            }
-            String responseJson = gson.toJson(storeMovie);
-            sendJson(ex, 201, responseJson);
-        } else if (method.equalsIgnoreCase("DELETE")) {
-
-            if (path.equals("/movies")) {
-                ex.sendResponseHeaders(405, 0);
-                ex.getResponseBody().close();
-                return;
-            } else if (parts.length == 3 && parts[1].equals("movies")) {
-                try {
-                    int id = Integer.parseInt(parts[2]);
-                    boolean deleted = storage.deleteMovie(id);
-                    if (deleted) {
-                        sendNoContent(ex);
-                        return;
-                    } else {
-                        ex.sendResponseHeaders(404, 0);
-                        ex.getResponseBody().close();
-                        return;
-                    }
-                } catch (NumberFormatException e) {
-                    sendError(ex, 400, "Некорректный ID", List.of());
+                int id = Integer.parseInt(parts[2]);
+                Movie movie = storage.getMovieById(id);
+                if (movie == null) {
+                    sendError(ex, 404, "Фильм не найден", List.of());
                     return;
                 }
-            } else {
-                ex.sendResponseHeaders(405, 0);
-                ex.getResponseBody().close();
+                String json = gson.toJson(movie);
+                sendJson(ex, 200, json);
+            } catch (NumberFormatException e) {
+                sendError(ex, 400, "Некорректный ID", List.of());
+            }
+            return;
+        }
+    }
+
+    private void handlePost(HttpExchange ex) throws IOException {
+        int currentYear = LocalDate.now().getYear();
+        Gson gson = new Gson();
+
+        String contentType = ex.getRequestHeaders().getFirst("Content-Type");
+        if (contentType == null || !contentType.startsWith("application/json")) {
+            ex.sendResponseHeaders(415, 0);
+            ex.getResponseBody().close();
+            return;
+        }
+
+        InputStream inputStream = ex.getRequestBody();
+        String body = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+        Movie inputMovie;
+        try {
+            inputMovie = gson.fromJson(body, Movie.class);
+        } catch (JsonSyntaxException e) {
+            sendError(ex, 422, "Ошибка валидации", List.of());
+            return;
+        }
+
+        String title = inputMovie.getTitle();
+        int year = inputMovie.getYear();
+        List<String> details = new ArrayList<>();
+
+        if (title == null || title.trim().isEmpty()) {
+            details.add("Название не должно быть пустым");
+        }
+
+        if (title.length() > 100) {
+            details.add("Название не должно превышать 100 символов");
+        }
+
+        if (year < 1888) {
+            details.add("Год должен быть не меньше 1888");
+        }
+
+        if (year > currentYear + 1) {
+            details.add("Год не должен быть больше " + (currentYear + 1));
+        }
+
+        if (!details.isEmpty()) {
+            sendError(ex, 422, "Ошибка валидации", details);
+            return;
+        }
+
+        Movie storeMovie = storage.addMovie(title, year);
+        if (storeMovie == null) {
+            details.add("Фильм с таким названием и годом уже есть");
+            sendError(ex, 422, "Ошибка валидации", details);
+            return;
+        } else {
+            String responseJson = gson.toJson(storeMovie);
+            sendJson(ex, 201, responseJson);
+        }
+    }
+
+    private void handleDelete(HttpExchange ex) throws IOException {
+        String path = ex.getRequestURI().getPath();
+        String[] parts = path.split("/");
+        if (path.equals("/movies")) {
+            sendMethodNotAllowed(ex);
+            return;
+        } else if (parts.length == 3 && parts[1].equals("movies")) {
+            try {
+                int id = Integer.parseInt(parts[2]);
+                boolean deleted = storage.deleteMovie(id);
+                if (deleted) {
+                    sendNoContent(ex);
+                    return;
+                } else {
+                    ex.sendResponseHeaders(404, 0);
+                    ex.getResponseBody().close();
+                    return;
+                }
+            } catch (NumberFormatException e) {
+                sendError(ex, 400, "Некорректный ID", List.of());
                 return;
             }
         } else {
-            ex.sendResponseHeaders(405, 0);
-            ex.getResponseBody().close();
+            sendMethodNotAllowed(ex);
+            return;
         }
     }
 }

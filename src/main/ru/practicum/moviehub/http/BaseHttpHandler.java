@@ -15,7 +15,6 @@ public abstract class BaseHttpHandler implements HttpHandler {
     protected final Gson gson = new Gson();
 
     protected void sendJson(HttpExchange ex, int status, String json) throws IOException {
-
         ex.getResponseHeaders().set("Content-Type", "application/json; charset=UTF-8");
         ex.sendResponseHeaders(status, 0);
         byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
@@ -33,5 +32,10 @@ public abstract class BaseHttpHandler implements HttpHandler {
     protected void sendError(HttpExchange ex, int statusCode, String error, List<String> details) throws IOException {
         ErrorResponse errorResponse = new ErrorResponse(error, details);
         sendJson(ex, statusCode, gson.toJson(errorResponse));
+    }
+
+    protected void sendMethodNotAllowed(HttpExchange ex) throws IOException {
+        ex.sendResponseHeaders(405, 0);
+        ex.getResponseBody().close();
     }
 }
