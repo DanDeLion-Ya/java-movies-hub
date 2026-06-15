@@ -1,7 +1,5 @@
 package ru.practicum.moviehub.http;
 
-import com.google.gson.Gson;
-
 import com.google.gson.JsonSyntaxException;
 import com.sun.net.httpserver.HttpExchange;
 import ru.practicum.moviehub.model.Movie;
@@ -36,7 +34,6 @@ public class MoviesHandler extends BaseHttpHandler {
     }
 
     private void handleGet(HttpExchange ex) throws IOException {
-        Gson gson = new Gson();
         String path = ex.getRequestURI().getPath();
         String[] parts = path.split("/");
         String query = ex.getRequestURI().getQuery();
@@ -75,7 +72,6 @@ public class MoviesHandler extends BaseHttpHandler {
 
     private void handlePost(HttpExchange ex) throws IOException {
         int currentYear = LocalDate.now().getYear();
-        Gson gson = new Gson();
 
         String contentType = ex.getRequestHeaders().getFirst("Content-Type");
         if (contentType == null || !contentType.startsWith("application/json")) {
@@ -102,7 +98,7 @@ public class MoviesHandler extends BaseHttpHandler {
             details.add("Название не должно быть пустым");
         }
 
-        if (title.length() > 100) {
+        if (title != null && title.length() > 100) {
             details.add("Название не должно превышать 100 символов");
         }
 
